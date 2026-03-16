@@ -1,0 +1,5 @@
+{
+  "name": "EchoLens - Family Archive Studio",
+  "description": "A living documentary and family archive platform that turns memories into cinematic stories.",
+  "requestFramePermissions": ["microphone"]
+}

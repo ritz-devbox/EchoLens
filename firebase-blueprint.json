@@ -1,0 +1,102 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the application.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The user's unique ID."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "user"],
+          "description": "The user's role."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the user was created."
+        }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Memory": {
+      "title": "Memory",
+      "description": "A preserved story generated from a user's memory.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who owns this memory."
+        },
+        "title": {
+          "type": "string",
+          "description": "The generated title of the memory."
+        },
+        "transcript": {
+          "type": "string",
+          "description": "The original transcript or input text."
+        },
+        "story": {
+          "type": "string",
+          "description": "The full generated story text."
+        },
+        "image_prompt": {
+          "type": "string",
+          "description": "The prompt used for the first image."
+        },
+        "blocks": {
+          "type": "array",
+          "description": "The interleaved text and image blocks.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["text", "image"]
+              },
+              "content": {
+                "type": "string"
+              },
+              "imageUrl": {
+                "type": "string"
+              }
+            },
+            "required": ["type", "content"]
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the memory was created."
+        }
+      },
+      "required": ["userId", "title", "transcript", "story", "blocks", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "Stores user profiles."
+    },
+    "/memories/{memoryId}": {
+      "schema": {
+        "$ref": "#/entities/Memory"
+      },
+      "description": "Stores user memories and generated stories."
+    }
+  }
+}

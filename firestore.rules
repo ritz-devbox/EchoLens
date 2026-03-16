@@ -1,0 +1,118 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required) - The user's unique ID
+    //   - email: string (required) - The user's email address
+    //   - name: string (optional) - The user's display name
+    //   - role: string (required) - The user's role
+    //   - createdAt: timestamp (required) - When the user was created
+    //
+    // Collection: memories
+    // Document ID: {memoryId}
+    // Fields:
+    //   - userId: string (required) - The ID of the user who owns this memory
+    //   - title: string (required) - The generated title of the memory
+    //   - transcript: string (required) - The original transcript or input text
+    //   - story: string (required) - The full generated story text
+    //   - image_prompt: string (optional) - The prompt used for the first image
+    //   - blocks: list (required) - The interleaved text and image blocks
+    //   - createdAt: timestamp (required) - When the memory was created
+    //
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+    
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+    
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+    
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+    
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() &&
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "nritish23@gmail.com" && request.auth.token.email_verified == true));
+    }
+    
+    function isValidUser() {
+      let data = request.resource.data;
+      return hasRequiredFields(['uid', 'email', 'role', 'createdAt']) &&
+             hasOnlyAllowedFields(['uid', 'email', 'name', 'role', 'createdAt']) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
+             data.email is string && isValidEmail(data.email) && data.email.size() < 200 &&
+             (!('name' in data) || (data.name is string && data.name.size() < 100)) &&
+             data.role in ['admin', 'user'] &&
+             data.createdAt is timestamp;
+    }
+    
+    function isValidMemory() {
+      let data = request.resource.data;
+      return hasRequiredFields(['userId', 'title', 'transcript', 'story', 'blocks', 'createdAt']) &&
+             hasOnlyAllowedFields(['userId', 'title', 'transcript', 'story', 'image_prompt', 'blocks', 'createdAt']) &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() < 100 &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.transcript is string && data.transcript.size() < 50000 &&
+             data.story is string && data.story.size() < 50000 &&
+             (!('image_prompt' in data) || (data.image_prompt is string && data.image_prompt.size() < 2000)) &&
+             data.blocks is list && data.blocks.size() < 100 &&
+             data.createdAt is timestamp;
+    }
+    
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser() && isOwner(userId) && uidUnchanged() && 
+                    ((request.resource.data.role == 'user') || isAdmin());
+      allow update: if isAuthenticated() && isValidUser() && isOwner(userId) && uidNotModified() && 
+                    ((request.resource.data.role == resource.data.role) || isAdmin()) &&
+                    request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+    
+    match /memories/{memoryId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidMemory() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && isValidMemory() && resource.data.userId == request.auth.uid && 
+                    request.resource.data.userId == resource.data.userId &&
+                    request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+  }
+}
