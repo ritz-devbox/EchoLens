@@ -1049,8 +1049,8 @@ export default function App() {
       </motion.nav>
 
       {/* Main Content Area */}
-      <main className="flex-1 relative p-10 overflow-y-auto">
-        <div className="max-w-6xl mx-auto h-full">
+      <main className="flex-1 relative p-10 overflow-y-auto flex flex-col">
+        <div className="max-w-6xl mx-auto flex-1 w-full">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
@@ -1068,6 +1068,11 @@ export default function App() {
             </motion.div>
           </AnimatePresence>
         </div>
+        
+        {/* Footer */}
+        <footer className="mt-12 py-6 border-t border-white/10 text-center text-white/40 text-sm font-light tracking-wide shrink-0">
+          <p>Developed by Ritish for EchoLens &copy; {new Date().getFullYear()}. All rights reserved.</p>
+        </footer>
       </main>
     </div>
   );
