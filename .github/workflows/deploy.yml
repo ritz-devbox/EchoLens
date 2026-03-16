@@ -1,9 +1,7 @@
 name: Automated Cloud Deployment
 
 on:
-  push:
-    branches:
-      - main # Triggers deployment automatically when code is pushed to the main branch
+  workflow_dispatch: # Allows manual triggering so it doesn't crash on every push due to missing secrets
 
 jobs:
   deploy:
